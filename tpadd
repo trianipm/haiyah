@@ -1,0 +1,298 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      home: SafeArea(child: MyHomePage()),
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({Key? key}) : super(key: key);
+
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  List<Map<String, String>> userData = [];
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController categoryController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData(); // Fetch initial data when the widget initializes
+  }
+
+  Future<void> addData() async {
+    if (nameController.text.isNotEmpty ||
+        categoryController.text.isNotEmpty ||
+        descriptionController.text.isNotEmpty) {
+      try {
+        String uri = "http://192.168.0.100/flutter12/add.php";
+        var res = await http.post(Uri.parse(uri), body: {
+          "id":
+              "", // Atau isi dengan nilai id yang sesuai jika sedang mengedit data
+          "name": nameController.text,
+          "category": categoryController.text,
+          "description": descriptionController.text,
+        });
+
+        var response = jsonDecode(res.body);
+        if (response["success"] == true) {
+          // Ubah dari "Success" ke "success"
+          print("Data sudah ditambahkan");
+          // Fetch updated data after adding
+          await _fetchData();
+          // Clear text fields after adding data
+          nameController.clear();
+          categoryController.clear();
+          descriptionController.clear();
+        } else {
+          print("Gagal menambahkan data: ${response["message"]}");
+        }
+      } catch (e) {
+        print(e);
+      }
+    } else {
+      print("Wajib diisi semua");
+    }
+  }
+
+  Future<void> _fetchData() async {
+    try {
+      String apiUrl = "http://192.168.0.100/flutter12/read.php";
+      var response = await http.get(Uri.parse(apiUrl));
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+        setState(() {
+          userData = List<Map<String, String>>.from(data);
+        });
+      } else {
+        print("Failed to load data: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error fetching data: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.purple[100],
+      appBar: AppBar(
+        backgroundColor: Colors.purple[600],
+        leading: const Icon(Icons.home_filled),
+        title: const Text('Data Gudang'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Expanded(
+              child: userData.isEmpty
+                  ? const Center(
+                      child: Text('Tidak ada barang dalam list'),
+                    )
+                  : ListView.builder(
+                      itemCount: userData.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final userDataItem = userData[index];
+                        return GestureDetector(
+                          onLongPress: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: const Text('Konfirmasi'),
+                                  content: const Text(
+                                      'Anda yakin ingin menghapus barang ini?'),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: const Text('Tidak'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          userData.removeAt(index);
+                                        });
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: const Text('Ya'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                          child: Card(
+                            elevation: 2,
+                            margin: const EdgeInsets.symmetric(vertical: 5),
+                            child: ListTile(
+                              title: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('ID: ${userDataItem['id']}'),
+                                  Text('Nama: ${userDataItem['name']}'),
+                                  Text('Kategori: ${userDataItem['category']}'),
+                                  Text(
+                                      'Deskripsi: ${userDataItem['description']}')
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      String newName =
+                                          userDataItem['name'].toString();
+                                      String newCategory =
+                                          userDataItem['category'].toString();
+                                      String newDescription =
+                                          userDataItem['description']
+                                              .toString();
+                                      return AlertDialog(
+                                        title: const Text('Edit Barang'),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            TextField(
+                                              controller: TextEditingController(
+                                                  text: newName),
+                                              onChanged: (value) {
+                                                newName = value;
+                                              },
+                                              decoration: const InputDecoration(
+                                                labelText: 'Nama Barang',
+                                              ),
+                                            ),
+                                            TextField(
+                                              controller: TextEditingController(
+                                                  text: newCategory),
+                                              onChanged: (value) {
+                                                newCategory = value;
+                                              },
+                                              decoration: const InputDecoration(
+                                                labelText: 'Kategori Barang',
+                                              ),
+                                            ),
+                                            TextField(
+                                              controller: TextEditingController(
+                                                  text: newDescription),
+                                              onChanged: (value) {
+                                                newDescription = value;
+                                              },
+                                              decoration: const InputDecoration(
+                                                labelText: 'Deskripsi Barang',
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        actions: <Widget>[
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: const Text('Batal'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              setState(() {
+                                                userData[index]['name'] =
+                                                    newName;
+                                                userData[index]['category'] =
+                                                    newCategory;
+                                                userData[index]['description'] =
+                                                    newDescription;
+                                              });
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: const Text('Simpan'),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: const Text('Tambah Data Gudang'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Barang',
+                      ),
+                    ),
+                    TextField(
+                      controller: categoryController,
+                      decoration: const InputDecoration(
+                        labelText: 'Kategori Barang',
+                      ),
+                    ),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Deskripsi Barang',
+                      ),
+                    ),
+                  ],
+                ),
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Batal'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      addData();
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Simpan'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
