@@ -1,0 +1,21 @@
+// Nambahin data
+
+INSERT INTO `datagudang`(`ID`, `Nama`, `Kategori`, `Deskripsi`) 
+VALUES 
+    ('1', 'Barang A', 'Kategori A', 'Deskripsi Barang A'),
+    ('2', 'Barang B', 'Kategori B', 'Deskripsi Barang B'),
+    ('3', 'Barang C', 'Kategori C', 'Deskripsi Barang C');
+
+
+// Update satu data doang
+
+UPDATE `datagudang` 
+SET `ID`='new_value_for_ID', 
+    `Nama`='new_value_for_Nama', 
+    `Kategori`='new_value_for_Kategori', 
+    `Deskripsi`='new_value_for_Deskripsi' 
+WHERE `ID` = '2';
+
+// Delete satu data doang
+
+DELETE FROM `datagudang` WHERE `ID` = '2';
